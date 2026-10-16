@@ -1,0 +1,94 @@
+PROYECTOH BACKEND - GUIA DE EJECUCION
+======================================
+
+Esta version usa SQLite para desarrollo local. No requiere Docker ni una
+instalacion local de PostgreSQL.
+
+REQUISITO
+---------
+Instala Node.js 20 LTS o superior desde https://nodejs.org. Despues abre
+PowerShell en la carpeta raiz del proyecto (la carpeta que contiene package.json).
+
+PRIMERA EJECUCION EN WINDOWS
+----------------------------
+Ejecuta estos comandos, en este orden:
+
+1. npm install
+2. Copy-Item .env.example .env
+3. npm run setup:sqlite
+4. npm run dev
+
+La API estara disponible en http://localhost:3000.
+La documentacion Swagger estara disponible en http://localhost:3000/docs.
+
+El paso 2 crea el archivo de configuracion local. No cambies esta linea:
+DATABASE_URL="file:./dev.db"
+
+Los valores de ejemplo para JWT permiten ejecutar la aplicacion con fines
+educativos. Antes de publicar la aplicacion, reemplazalos por secretos reales.
+Google y Facebook solo funcionaran cuando configures sus credenciales en .env.
+
+ARCHIVOS GENERADOS LOCALMENTE
+-----------------------------
+- prisma/dev.db: base de datos SQLite de desarrollo.
+- prisma/migrations: historial de cambios de SQLite, creado por setup:sqlite.
+
+La base dev.db esta ignorada por Git. No copies este archivo si deseas empezar
+con una base vacia en otra computadora.
+
+COMANDOS DE USO DIARIO
+----------------------
+- npm run dev
+  Inicia la API en desarrollo.
+
+- npm run test
+  Ejecuta las pruebas automatizadas.
+
+- npm run build
+  Comprueba tipos y crea la carpeta dist para produccion.
+
+- npm run prisma:studio
+  Abre una interfaz para consultar y editar prisma/dev.db.
+
+- npm run prisma:migrate -- --name descripcion_del_cambio
+  Ejecuta este comando despues de cambiar prisma/schema.prisma. Reemplaza
+  descripcion_del_cambio por un nombre corto, por ejemplo agregar_telefono.
+
+REINICIAR LA BASE LOCAL
+-----------------------
+Para borrar todos los datos locales y volver a crear la base, ejecuta:
+
+npm run prisma:reset
+
+Prisma pedira confirmacion. Este comando elimina de forma permanente los datos
+de prisma/dev.db; no lo uses si necesitas conservarlos.
+
+DESPLIEGUE FUTURO EN RENDER CON POSTGRESQL
+------------------------------------------
+1. Crea una base PostgreSQL en Render.
+2. Crea un Web Service de Node.js desde este repositorio.
+3. En las variables de entorno del Web Service, configura DATABASE_URL con la
+   Internal Database URL de la base de Render. Agrega tambien las variables de
+   .env.example, usando secretos reales para JWT e INTERNAL_API_KEY.
+4. Configura los comandos de Render:
+
+   Build Command: npm install && npm run prisma:generate:postgres && npm run build
+   Start Command: npm run prisma:push:postgres && npm start
+
+El esquema usado solo por Render es prisma/schema.postgresql.prisma. El comando
+prisma:push:postgres crea o sincroniza las tablas PostgreSQL al iniciar.
+
+CAMBIOS FUTUROS DEL MODELO
+--------------------------
+Cada cambio de datos debe aplicarse en ambos archivos:
+- prisma/schema.prisma para SQLite local.
+- prisma/schema.postgresql.prisma para Render.
+
+Luego ejecuta localmente:
+npm run prisma:migrate -- --name nombre_del_cambio
+
+Antes de desplegar, con una DATABASE_URL de PostgreSQL configurada, ejecuta:
+npm run prisma:validate:postgres
+
+Las migraciones creadas para SQLite no se aplican en PostgreSQL, porque cada
+motor usa SQL distinto. Render sincroniza su esquema con prisma:push:postgres.

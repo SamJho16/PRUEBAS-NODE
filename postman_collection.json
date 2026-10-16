@@ -1,0 +1,161 @@
+{
+  "info": {
+    "_postman_id": "8c145c4c-66f8-4ecf-bb6a-c9c3d1a14f21",
+    "name": "PROYECTOH Backend API",
+    "description": "Coleccion para probar la API del backend. Configura baseUrl, internalBaseUrl y apiKey. Los endpoints protegidos usan accessToken. El cookie jar de Postman conserva refreshToken al iniciar sesion; habilita cookies para localhost.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1", "type": "string" },
+    { "key": "internalBaseUrl", "value": "http://localhost:3000/internal/v1", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "apiKey", "value": "", "type": "string" },
+    { "key": "usuarioId", "value": "REEMPLAZAR_UUID", "type": "string" },
+    { "key": "asesorId", "value": "REEMPLAZAR_UUID", "type": "string" },
+    { "key": "clienteId", "value": "REEMPLAZAR_UUID", "type": "string" },
+    { "key": "publicacionId", "value": "REEMPLAZAR_UUID", "type": "string" },
+    { "key": "comentarioId", "value": "REEMPLAZAR_UUID", "type": "string" },
+    { "key": "archivo", "value": "REEMPLAZAR_NOMBRE_ARCHIVO", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login con Google",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 200) {", "  const data = pm.response.json();", "  if (data.accessToken) pm.collectionVariables.set('accessToken', data.accessToken);", "}"] } }],
+          "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"idToken\": \"REEMPLAZAR_CON_GOOGLE_ID_TOKEN\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/auth/google", "description": "Guarda accessToken en la variable de coleccion al responder 200; refreshToken llega en cookie httpOnly." }
+        },
+        {
+          "name": "Login con Facebook",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["if (pm.response.code === 200) {", "  const data = pm.response.json();", "  if (data.accessToken) pm.collectionVariables.set('accessToken', data.accessToken);", "}"] } }],
+          "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"accessToken\": \"REEMPLAZAR_CON_FACEBOOK_ACCESS_TOKEN\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/auth/facebook", "description": "Guarda accessToken en variable de coleccion al responder 200; refreshToken llega en cookie httpOnly." }
+        },
+        {
+          "name": "Renovar access token",
+          "request": { "method": "POST", "auth": { "type": "noauth" }, "header": [], "url": "{{baseUrl}}/auth/refresh", "description": "Sin body. Requiere la cookie refreshToken recibida al iniciar sesion. Guarda manualmente el accessToken de la respuesta en la variable accessToken." }
+        },
+        {
+          "name": "Logout",
+          "request": { "method": "POST", "header": [], "url": "{{baseUrl}}/auth/logout", "description": "Sin body. Requiere Bearer y la cookie refreshToken." }
+        },
+        {
+          "name": "Mi usuario autenticado",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/auth/me" }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Asignar rol inicial",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"rol\": \"CLIENTE\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/usuarios/me/rol" }
+        },
+        { "name": "Obtener mi perfil", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/usuarios/me" } },
+        {
+          "name": "Editar mi perfil",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"nombre\": \"Nombre Apellido\",\n  \"fotoPerfil\": \"https://ejemplo.com/foto.jpg\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/usuarios/me" }
+        }
+      ]
+    },
+    {
+      "name": "Asesores",
+      "item": [
+        {
+          "name": "Listar asesores",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/asesores?pagina=1&limite=10", "description": "Requiere rol CLIENTE. pagina y limite tienen defaults 1 y 10. Agrega busqueda como query param si lo necesitas." }
+        },
+        {
+          "name": "Solicitar verificacion (subir documentos)",
+          "request": { "method": "POST", "header": [], "body": { "mode": "formdata", "formdata": [{ "key": "documentoFrontal", "type": "file", "src": "", "description": "Obligatorio: imagen JPG/PNG/WEBP o PDF, hasta 5 MB." }, { "key": "documentoSello", "type": "file", "src": "", "description": "Obligatorio: imagen JPG/PNG/WEBP o PDF, hasta 5 MB." }] }, "url": "{{baseUrl}}/asesores/me/verificacion", "description": "Requiere rol ASESOR. Selecciona ambos archivos desde Postman." }
+        },
+        { "name": "Consultar estado de verificacion", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/asesores/me/verificacion", "description": "Requiere rol ASESOR." } },
+        { "name": "Obtener perfil publico de asesor", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/asesores/{{asesorId}}" } },
+        {
+          "name": "Evaluar asesor",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"calificacion\": 5,\n  \"confiabilidad\": 5,\n  \"compromiso\": 5,\n  \"eficiencia\": 5\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/asesores/{{asesorId}}/evaluaciones", "description": "Requiere rol CLIENTE. Cada calificacion debe ser un entero de 1 a 5." }
+        },
+        { "name": "Listar evaluaciones de asesor", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/asesores/{{asesorId}}/evaluaciones" } }
+      ]
+    },
+    {
+      "name": "Clientes",
+      "item": [
+        { "name": "Obtener perfil publico de cliente", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes/{{clienteId}}", "description": "Requiere rol ASESOR." } },
+        {
+          "name": "Evaluar cliente",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"calificacion\": 5\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/clientes/{{clienteId}}/evaluaciones", "description": "Requiere rol ASESOR. calificacion: entero de 1 a 5." }
+        },
+        { "name": "Listar evaluaciones de cliente", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/clientes/{{clienteId}}/evaluaciones" } }
+      ]
+    },
+    {
+      "name": "Publicaciones",
+      "item": [
+        {
+          "name": "Crear publicacion",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"titulo\": \"Busco asesor\",\n  \"contenido\": \"Necesito orientacion sobre mi proyecto.\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/publicaciones" }
+        },
+        {
+          "name": "Listar publicaciones",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/publicaciones?pagina=1&limite=10" }
+        },
+        { "name": "Obtener publicacion", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/publicaciones/{{publicacionId}}" } },
+        {
+          "name": "Editar publicacion",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"titulo\": \"Titulo actualizado\",\n  \"contenido\": \"Contenido actualizado.\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/publicaciones/{{publicacionId}}" }
+        },
+        { "name": "Eliminar publicacion", "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/publicaciones/{{publicacionId}}" } }
+      ]
+    },
+    {
+      "name": "Comentarios",
+      "item": [
+        {
+          "name": "Crear comentario en publicacion",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"contenido\": \"Me interesa esta publicacion.\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/publicaciones/{{publicacionId}}/comentarios" }
+        },
+        { "name": "Listar comentarios de publicacion", "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/publicaciones/{{publicacionId}}/comentarios" } },
+        {
+          "name": "Editar comentario propio",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"contenido\": \"Comentario editado.\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/comentarios/{{comentarioId}}" }
+        },
+        { "name": "Eliminar comentario propio", "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/comentarios/{{comentarioId}}" } }
+      ]
+    },
+    {
+      "name": "Reacciones",
+      "item": [
+        {
+          "name": "Agregar reaccion ME_INTERESA",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"tipo\": \"ME_INTERESA\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/publicaciones/{{publicacionId}}/reacciones" }
+        },
+        { "name": "Quitar mi reaccion", "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/publicaciones/{{publicacionId}}/reacciones" } }
+      ]
+    },
+    {
+      "name": "Verificacion interna",
+      "item": [
+        {
+          "name": "Actualizar verificacion (webhook)",
+          "request": { "method": "PATCH", "auth": { "type": "noauth" }, "header": [{ "key": "x-api-key", "value": "{{apiKey}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"estado\": \"RECHAZADO\",\n  \"motivoRechazo\": \"Documento ilegible\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{internalBaseUrl}}/verificaciones/{{usuarioId}}", "description": "Usa estado VERIFICADO o RECHAZADO. motivoRechazo es opcional." }
+        }
+      ]
+    },
+    {
+      "name": "Infraestructura",
+      "item": [
+        { "name": "Health check", "request": { "method": "GET", "auth": { "type": "noauth" }, "header": [], "url": "http://localhost:3000/health" } },
+        { "name": "Swagger UI", "request": { "method": "GET", "auth": { "type": "noauth" }, "header": [], "url": "http://localhost:3000/docs" } },
+        { "name": "Descargar documento subido", "request": { "method": "GET", "auth": { "type": "noauth" }, "header": [], "url": "http://localhost:3000/uploads/verificaciones/{{archivo}}", "description": "Sustituye archivo por el nombre generado que devuelve/almacena el backend." } }
+      ]
+    }
+  ]
+}

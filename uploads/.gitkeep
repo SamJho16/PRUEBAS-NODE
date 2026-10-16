@@ -1,0 +1,1 @@
+Este archivo asegura que la carpeta "uploads" (para documentos de verificacion) exista en el repositorio aunque este vacia. El contenido subido por usuarios NO se versiona (ver .gitignore).

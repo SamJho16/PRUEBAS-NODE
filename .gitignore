@@ -1,0 +1,31 @@
+# Dependencias (NO se versionan ni se envian; se regeneran con "npm install")
+node_modules/
+
+# Build de TypeScript
+dist/
+
+# Variables de entorno reales (nunca subir secretos)
+.env
+.env.local
+.env.*.local
+
+# Archivos subidos por usuarios (documentos de verificacion)
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# Prisma (el cliente generado se regenera con "npx prisma generate")
+node_modules/.prisma/
+prisma/*.db
+prisma/*.db-journal
+
+# Cobertura de tests
+coverage/
+
+# Editor / SO
+.vscode/
+.DS_Store
+Thumbs.db

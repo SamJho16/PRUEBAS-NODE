@@ -1,0 +1,188 @@
+// ==========================================================
+// Prisma Schema - PROYECTOH
+// Esquema para desarrollo local con SQLite.
+// El equivalente PostgreSQL para Render esta en schema.postgresql.prisma.
+// ==========================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------
+// ENTIDAD BASE: Usuario
+// Representa tanto a Asesores como a Clientes (un solo rol activo a la vez)
+// --------------------------
+model Usuario {
+  id             String        @id @default(uuid())
+  email          String        @unique
+  nombre         String
+  fotoPerfil     String?
+  proveedorAuth  String
+  proveedorId    String
+  // rol es nullable porque un usuario recien registrado aun no elige su rol
+  rol            String?
+  estado         String        @default("ACTIVO")
+  creadoEn       DateTime      @default(now())
+  actualizadoEn  DateTime      @updatedAt
+
+  // Relaciones 1:1 segun el rol asignado
+  perfilAsesor   PerfilAsesor?
+  perfilCliente  PerfilCliente?
+
+  // Publicaciones y comentarios creados por el usuario
+  publicaciones  Publicacion[]
+  comentarios    Comentario[]
+  reacciones     Reaccion[]
+
+  // Evaluaciones donde el usuario es evaluado o evaluador
+  evaluacionesRecibidasComoAsesor EvaluacionAsesor[] @relation("AsesorEvaluado")
+  evaluacionesHechasComoCliente   EvaluacionAsesor[] @relation("ClienteEvaluador")
+  evaluacionesRecibidasComoCliente EvaluacionCliente[] @relation("ClienteEvaluado")
+  evaluacionesHechasComoAsesor     EvaluacionCliente[] @relation("AsesorEvaluador")
+
+  refreshTokens  RefreshToken[]
+
+  // Un mismo proveedor no puede repetir el mismo proveedorId (login social unico)
+  @@unique([proveedorAuth, proveedorId])
+  @@index([rol])
+}
+
+// --------------------------
+// PerfilAsesor: extension 1:1 de Usuario cuando rol = ASESOR
+// --------------------------
+model PerfilAsesor {
+  id                          String             @id @default(uuid())
+  usuarioId                   String             @unique
+  usuario                     Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  estadoVerificacion          String             @default("NO_VERIFICADO")
+  documentoIdentidadFrontal   String?
+  documentoIdentidadSello     String?
+  fechaSolicitudVerificacion  DateTime?
+  fechaVerificacion           DateTime?
+  motivoRechazo               String?
+  creadoEn                    DateTime           @default(now())
+  actualizadoEn               DateTime           @updatedAt
+}
+
+// --------------------------
+// PerfilCliente: extension 1:1 de Usuario cuando rol = CLIENTE
+// --------------------------
+model PerfilCliente {
+  id            String   @id @default(uuid())
+  usuarioId     String   @unique
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+}
+
+// --------------------------
+// Publicacion
+// Regla de visibilidad cruzada: ASESOR <-> CLIENTE (ver PublicacionService)
+// --------------------------
+model Publicacion {
+  id               String            @id @default(uuid())
+  autorId          String
+  autor            Usuario           @relation(fields: [autorId], references: [id], onDelete: Cascade)
+  autorRol         String
+  titulo           String
+  contenido        String
+  estado           String            @default("ACTIVA")
+  totalComentarios Int               @default(0)
+  totalReacciones  Int               @default(0)
+  creadoEn         DateTime          @default(now())
+  actualizadoEn    DateTime          @updatedAt
+
+  comentarios      Comentario[]
+  reacciones       Reaccion[]
+
+  @@index([autorRol, estado])
+  @@index([autorId])
+}
+
+// --------------------------
+// Comentario
+// Solo visible para el dueno de la publicacion (ver ComentarioService)
+// --------------------------
+model Comentario {
+  id             String      @id @default(uuid())
+  publicacionId  String
+  publicacion    Publicacion @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+  autorId        String
+  autor          Usuario     @relation(fields: [autorId], references: [id], onDelete: Cascade)
+  contenido      String
+  creadoEn       DateTime    @default(now())
+  actualizadoEn  DateTime    @updatedAt
+
+  @@index([publicacionId])
+}
+
+// --------------------------
+// Reaccion (1 reaccion por usuario por publicacion)
+// --------------------------
+model Reaccion {
+  id             String       @id @default(uuid())
+  publicacionId  String
+  publicacion    Publicacion  @relation(fields: [publicacionId], references: [id], onDelete: Cascade)
+  usuarioId      String
+  usuario        Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipo           String       @default("ME_INTERESA")
+  creadoEn       DateTime     @default(now())
+
+  @@unique([publicacionId, usuarioId])
+}
+
+// --------------------------
+// EvaluacionAsesor: un CLIENTE evalua a un ASESOR (4 criterios, 1 vez)
+// --------------------------
+model EvaluacionAsesor {
+  id             String   @id @default(uuid())
+  asesorId       String
+  asesor         Usuario  @relation("AsesorEvaluado", fields: [asesorId], references: [id], onDelete: Cascade)
+  clienteId      String
+  cliente        Usuario  @relation("ClienteEvaluador", fields: [clienteId], references: [id], onDelete: Cascade)
+  calificacion   Int
+  confiabilidad  Int
+  compromiso     Int
+  eficiencia     Int
+  creadoEn       DateTime @default(now())
+  actualizadoEn  DateTime @updatedAt
+
+  @@unique([asesorId, clienteId])
+}
+
+// --------------------------
+// EvaluacionCliente: un ASESOR evalua a un CLIENTE (solo Calificacion, 1 vez)
+// --------------------------
+model EvaluacionCliente {
+  id             String   @id @default(uuid())
+  clienteId      String
+  cliente        Usuario  @relation("ClienteEvaluado", fields: [clienteId], references: [id], onDelete: Cascade)
+  asesorId       String
+  asesor         Usuario  @relation("AsesorEvaluador", fields: [asesorId], references: [id], onDelete: Cascade)
+  calificacion   Int
+  creadoEn       DateTime @default(now())
+  actualizadoEn DateTime  @updatedAt
+
+  @@unique([clienteId, asesorId])
+}
+
+// --------------------------
+// RefreshToken: necesario para /auth/refresh y /auth/logout (revocacion)
+// Se guarda el hash del token, nunca el token en texto plano
+// --------------------------
+model RefreshToken {
+  id            String   @id @default(uuid())
+  usuarioId     String
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tokenHash     String   @unique
+  expiraEn      DateTime
+  revocado      Boolean  @default(false)
+  creadoEn      DateTime @default(now())
+
+  @@index([usuarioId])
+}
